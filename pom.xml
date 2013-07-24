@@ -14,14 +14,6 @@
 		</developer>
 	</developers>
 
-	<repositories>
-		<repository>
-			<id>spring-remoting-bridge</id>
-			<name>SpringRemotingBridge</name>
-			<url>https://subversion.assembla.com/svn/spring-remoting-bridge/</url>
-		</repository>
-	</repositories>
-
 	<properties>
 		<version.spring>3.0.6.RELEASE</version.spring>
 		<version.spring-remoting>2.0</version.spring-remoting>
