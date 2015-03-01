@@ -15,8 +15,8 @@
 	</developers>
 
 	<properties>
-		<version.spring>3.0.6.RELEASE</version.spring>
-		<version.spring-remoting>2.0</version.spring-remoting>
+		<version.spring>4.1.5.RELEASE</version.spring>
+		<version.spring-remoting>2.0.8</version.spring-remoting>
 		<version.slf4j>1.6.1</version.slf4j>
 		<version.commons-lang>2.6</version.commons-lang>
 		<test.skip>true</test.skip>
