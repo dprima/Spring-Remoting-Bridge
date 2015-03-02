@@ -1,4 +1,4 @@
-package cc.co.dprima.remoting;
+package com.dk.remoting;
 
 import org.apache.commons.httpclient.Credentials;
 import org.apache.commons.httpclient.HttpState;

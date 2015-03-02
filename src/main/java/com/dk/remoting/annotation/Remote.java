@@ -1,4 +1,4 @@
-package cc.co.dprima.remoting.annotation;
+package com.dk.remoting.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 import org.springframework.stereotype.Component;
 
-import cc.co.dprima.remoting.enumeration.Exposer;
+import com.dk.remoting.enumeration.Exposer;
 
 @Target({ ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)

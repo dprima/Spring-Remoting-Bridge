@@ -1,4 +1,4 @@
-package cc.co.dprima.remoting;
+package com.dk.remoting;
 
 import java.io.IOException;
 
@@ -24,8 +24,8 @@ import org.springframework.remoting.httpinvoker.HttpInvokerServiceExporter;
 import org.springframework.remoting.rmi.RmiServiceExporter;
 import org.springframework.util.ClassUtils;
 
-import cc.co.dprima.remoting.annotation.Remote;
-import cc.co.dprima.remoting.enumeration.Exposer;
+import com.dk.remoting.annotation.Remote;
+import com.dk.remoting.enumeration.Exposer;
 
 public class ExporterBeanFactoryPostProcessor implements
 		BeanFactoryPostProcessor {
