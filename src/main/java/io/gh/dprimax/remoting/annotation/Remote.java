@@ -1,17 +1,19 @@
-package com.dk.remoting.annotation;
+package io.gh.dprimax.remoting.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.springframework.stereotype.Component;
+import io.gh.dprimax.remoting.enumeration.Exposer;
 
-import com.dk.remoting.enumeration.Exposer;
-
+/**
+ * 
+ * @author dprimax
+ *
+ */
 @Target({ ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
-@Component
 public @interface Remote {
 
 	public abstract String name() default "";

@@ -1,8 +1,7 @@
-package com.dk.remoting;
+package io.gh.dprimax.remoting;
 
 import java.io.IOException;
 
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -18,20 +17,18 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.SimpleMetadataReaderFactory;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
-import org.springframework.remoting.caucho.BurlapServiceExporter;
 import org.springframework.remoting.caucho.HessianServiceExporter;
 import org.springframework.remoting.httpinvoker.HttpInvokerServiceExporter;
 import org.springframework.remoting.rmi.RmiServiceExporter;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.StringUtils;
 
-import com.dk.remoting.annotation.Remote;
-import com.dk.remoting.enumeration.Exposer;
+import io.gh.dprimax.remoting.annotation.Remote;
+import io.gh.dprimax.remoting.enumeration.Exposer;
 
-public class ExporterBeanFactoryPostProcessor implements
-		BeanFactoryPostProcessor {
+public class RemoteBeanExporter implements BeanFactoryPostProcessor {
 
-	private static final Logger LOGGER = LoggerFactory
-			.getLogger(ExporterBeanFactoryPostProcessor.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(RemoteBeanExporter.class);
 
 	private String rmiRegistryHost;
 	private int rmiRegistryPort;
@@ -61,58 +58,48 @@ public class ExporterBeanFactoryPostProcessor implements
 		this.alwaysCreateRegistry = alwaysCreateRegistry;
 	}
 
-	public ExporterBeanFactoryPostProcessor() {
+	public RemoteBeanExporter() {
 	}
 
 	@SuppressWarnings("rawtypes")
 	@Override
-	public void postProcessBeanFactory(
-			ConfigurableListableBeanFactory beanFactory) throws BeansException {
-		BeanFactory bf = beanFactory;
-		do {
-			if (LOGGER.isDebugEnabled())
-				LOGGER.debug("Scan from factory: {}", bf);
+	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 
-			String beanDefinitionNames[] = ((ListableBeanFactory) bf)
-					.getBeanDefinitionNames();
+		BeanFactory bf = beanFactory;
+		LOGGER.debug("Scan from factory: {}", bf);
+
+		while ((bf = ((HierarchicalBeanFactory) bf).getParentBeanFactory()) != null) {
+
+			String beanDefinitionNames[] = ((ListableBeanFactory) bf).getBeanDefinitionNames();
 			String as[];
 			int j = (as = beanDefinitionNames).length;
 			for (int i = 0; i < j; i++) {
 				String name = as[i];
-				BeanDefinition beanDefinition = ((ConfigurableListableBeanFactory) bf)
-						.getBeanDefinition(name);
+				BeanDefinition beanDefinition = ((ConfigurableListableBeanFactory) bf).getBeanDefinition(name);
 				String clazz = beanDefinition.getBeanClassName();
 
-				if (LOGGER.isDebugEnabled())
-					LOGGER.debug("###########Found class: {} ", clazz);
+				LOGGER.debug("###########Found class: {} ", clazz);
 
 				if (clazz != null) {
-					Class serviceInterface = getServiceInterface(clazz,
-							beanFactory.getBeanClassLoader());
+					Class serviceInterface = getServiceInterface(clazz, beanFactory.getBeanClassLoader());
 					if (serviceInterface != null) {
-						Remote annotationClazz = (Remote) AnnotationUtils
-								.findAnnotation(serviceInterface, Remote.class);
-						String remotingName = (new StringBuilder("/")).append(
-								getDefaultName(serviceInterface)).toString();
+						Remote annotationClazz = (Remote) AnnotationUtils.findAnnotation(serviceInterface,
+								Remote.class);
+						String remotingName = "/".concat(getDefaultName(serviceInterface));
+
 						if (!StringUtils.isEmpty(annotationClazz.name()))
-							remotingName = (new StringBuilder("/")).append(
-									annotationClazz.name()).toString();
+							remotingName = (new StringBuilder("/")).append(annotationClazz.name()).toString();
 
-						if (LOGGER.isDebugEnabled())
-							LOGGER.debug(
-									"###########Registering service class {} with name {}",
-									clazz, remotingName);
+						LOGGER.debug("###########Registering service class {} with name {}", clazz, remotingName);
 
-						BeanDefinition bd = createExporterBeanDefinition(
-								remotingName, name, serviceInterface,
+						BeanDefinition bd = createExporterBeanDefinition(remotingName, name, serviceInterface,
 								annotationClazz.exposer());
-						((DefaultListableBeanFactory) beanFactory)
-								.registerBeanDefinition(remotingName, bd);
+						((DefaultListableBeanFactory) beanFactory).registerBeanDefinition(remotingName, bd);
 					}
 				}
 			}
 
-		} while ((bf = ((HierarchicalBeanFactory) bf).getParentBeanFactory()) != null);
+		}
 
 		if (LOGGER.isDebugEnabled())
 			LOGGER.debug("#########################################postProcessBeanFactory SUCCESS...");
@@ -129,8 +116,8 @@ public class ExporterBeanFactoryPostProcessor implements
 	private String getDefaultName(Class serviceInterfaceClass) {
 		String shortClassName = ClassUtils.getShortName(serviceInterfaceClass);
 		String firstLetter = shortClassName.substring(0, 1);
-		return (new StringBuilder(String.valueOf(firstLetter.toLowerCase())))
-				.append(shortClassName.substring(1)).toString();
+		return (new StringBuilder(String.valueOf(firstLetter.toLowerCase()))).append(shortClassName.substring(1))
+				.toString();
 	}
 
 	/**
@@ -142,55 +129,37 @@ public class ExporterBeanFactoryPostProcessor implements
 	 * @return
 	 */
 	@SuppressWarnings("rawtypes")
-	private BeanDefinition createExporterBeanDefinition(String beanName,
-			String serviceName, Class serviceInterface, Exposer exposer) {
+	private BeanDefinition createExporterBeanDefinition(String beanName, String serviceName, Class serviceInterface,
+			Exposer exposer) {
 
 		BeanDefinitionBuilder beanDefinitionBuilder = null;
 
-		if (Exposer.BURLAP == exposer) {
-			beanDefinitionBuilder = BeanDefinitionBuilder
-					.genericBeanDefinition(BurlapServiceExporter.class)
-					.addPropertyReference("service", serviceName)
-					.addPropertyValue("serviceInterface", serviceInterface);
-		} else if (Exposer.HESSIAN == exposer) {
-			beanDefinitionBuilder = BeanDefinitionBuilder
-					.genericBeanDefinition(HessianServiceExporter.class)
+		if (Exposer.HESSIAN == exposer) {
+			beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(HessianServiceExporter.class)
 					.addPropertyReference("service", serviceName)
 					.addPropertyValue("serviceInterface", serviceInterface);
 		} else if (Exposer.HTTP == exposer) {
-			beanDefinitionBuilder = BeanDefinitionBuilder
-					.genericBeanDefinition(HttpInvokerServiceExporter.class)
+			beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(HttpInvokerServiceExporter.class)
 					.addPropertyReference("service", serviceName)
 					.addPropertyValue("serviceInterface", serviceInterface);
 		} else if (Exposer.RMI == exposer) {
-			beanDefinitionBuilder = BeanDefinitionBuilder
-					.genericBeanDefinition(RmiServiceExporter.class)
+			beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(RmiServiceExporter.class)
 					.addPropertyReference("service", serviceName)
-					.addPropertyValue("serviceName",
-							beanName.substring(1, beanName.length()))
+					.addPropertyValue("serviceName", beanName.substring(1, beanName.length()))
 					.addPropertyValue("serviceInterface", serviceInterface)
-					.addPropertyValue("alwaysCreateRegistry",
-							isAlwaysCreateRegistry());
+					.addPropertyValue("alwaysCreateRegistry", isAlwaysCreateRegistry());
 			if (0 != getRmiRegistryPort())
-				beanDefinitionBuilder.addPropertyValue("registryPort",
-						getRmiRegistryPort());
+				beanDefinitionBuilder.addPropertyValue("registryPort", getRmiRegistryPort());
 			if (!StringUtils.isEmpty(getRmiRegistryHost()))
-				beanDefinitionBuilder.addPropertyValue("registryHost",
-						getRmiRegistryHost());
+				beanDefinitionBuilder.addPropertyValue("registryHost", getRmiRegistryHost());
 
-			if (LOGGER.isDebugEnabled())
-				LOGGER.debug(
-						"Building RmiServiceExporter with [service={}, serviceName={}, serviceInterface={}, registryHost={}, registryPort={}]",
-						new Object[] {
-								serviceName,
-								beanName,
-								serviceInterface,
-								beanDefinitionBuilder.getBeanDefinition()
-										.getPropertyValues()
-										.getPropertyValue("registryHost"),
-								beanDefinitionBuilder.getBeanDefinition()
-										.getPropertyValues()
-										.getPropertyValue("registryPort") });
+			LOGGER.debug(
+					"Building RmiServiceExporter with [service={}, serviceName={}, serviceInterface={}, registryHost={}, registryPort={}]",
+					new Object[] { serviceName, beanName, serviceInterface,
+							beanDefinitionBuilder.getBeanDefinition().getPropertyValues()
+									.getPropertyValue("registryHost"),
+							beanDefinitionBuilder.getBeanDefinition().getPropertyValues()
+									.getPropertyValue("registryPort") });
 		}
 
 		return beanDefinitionBuilder.getBeanDefinition();
@@ -209,12 +178,9 @@ public class ExporterBeanFactoryPostProcessor implements
 				return null;
 
 			AnnotationTypeFilter filter = new AnnotationTypeFilter(Remote.class);
-			SimpleMetadataReaderFactory simpleMetadataReaderFactory = new SimpleMetadataReaderFactory(
-					classLoader);
-			MetadataReader metadataReader = simpleMetadataReaderFactory
-					.getMetadataReader(className);
-			String interfaceNames[] = metadataReader.getClassMetadata()
-					.getInterfaceNames();
+			SimpleMetadataReaderFactory simpleMetadataReaderFactory = new SimpleMetadataReaderFactory(classLoader);
+			MetadataReader metadataReader = simpleMetadataReaderFactory.getMetadataReader(className);
+			String interfaceNames[] = metadataReader.getClassMetadata().getInterfaceNames();
 
 			String as[];
 			int i = 0;
@@ -226,17 +192,13 @@ public class ExporterBeanFactoryPostProcessor implements
 
 			if (!StringUtils.isEmpty(ifName))
 				if (i < j) {
-					MetadataReader ifMetaDataReader = simpleMetadataReaderFactory
-							.getMetadataReader(ifName);
-					if (filter.match(ifMetaDataReader,
-							simpleMetadataReaderFactory)) {
-						String clazzName = metadataReader.getClassMetadata()
-								.getClassName();
+					MetadataReader ifMetaDataReader = simpleMetadataReaderFactory.getMetadataReader(ifName);
+					if (filter.match(ifMetaDataReader, simpleMetadataReaderFactory)) {
+						String clazzName = metadataReader.getClassMetadata().getClassName();
 
 						if (LOGGER.isDebugEnabled())
-							LOGGER.debug(
-									"Class {} implements interface {} which annotated with @Remote",
-									clazzName, ifName);
+							LOGGER.debug("Class {} implements interface {} which annotated with @Remote", clazzName,
+									ifName);
 
 						return ClassUtils.forName(ifName, classLoader);
 					}
